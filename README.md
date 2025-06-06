@@ -4,8 +4,8 @@
 clone the repo:
 ~~~bash
 git clone https://github.com/ilya-4real/pomodoro_tracker.git
-# make pomodoro file executable
-chmod +x pomodoro
+# make main.py file executable
+chmod +x main.py
 
 # create soft link or clone the file to ~/.local/bin
 cp main.py ~/.local/bin/pomodoro
