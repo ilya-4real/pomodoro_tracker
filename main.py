@@ -1,9 +1,10 @@
 #! /usr/bin/env python
 
 import argparse
-from collections import namedtuple
 import os
 import time
+
+from internal.database import AppConfig, SqliteTaskDatabase, Task
 
 
 def task_completed_notify(task_title: str) -> None:
@@ -12,23 +13,25 @@ def task_completed_notify(task_title: str) -> None:
     print("🍅 Pomodoro completed", message)
 
 
-Arguments = namedtuple("Arguments", ["minutes",  "task_title"])
-
-def create_parser() -> Arguments:
+def create_parser():
     parser = argparse.ArgumentParser(
         "Pomodoro",
-        "pomodoro 25 'task f521'",
+        "pomodoro focus 25 'task f521'",
         "Helps to track your time using Pomodoro 🍅",
     )
-    parser.add_argument("minutes", help="for how long will timer run")
-    parser.add_argument("task_title", help="What task you are working on")
-    args = parser.parse_args()
-    try:
-        minutes = int(args.minutes)
-        return Arguments(minutes, args.task_title)
-    except ValueError:
-        print("Invalid minutes value. It should be correct positive integer number. Using default 25 minutes")
-    return Arguments(25, args.task_title)
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+
+    subparsers.add_parser("init", help="Initialize local tasks database")
+
+    focus_parser = subparsers.add_parser("focus", help="Start new 🍅 Pomodoro session")
+    focus_parser.add_argument("minutes", type=int, help="for how long will timer run")
+    focus_parser.add_argument("task_title", help="What task you are working on")
+
+    subparsers.add_parser(
+        "report", help="Create csv file with all 🍅 Pomodoro sessions"
+    )
+
+    return parser.parse_args()
 
 
 def printProgressBar(
@@ -70,21 +73,50 @@ def run_timer(minutes: int):
         time.sleep(wait_time)
         printProgressBar(i, ticks, prefix="Progress:")
 
+
 def show_current_pomodoro_info(minutes: int, task_title: str) -> None:
     print("🍅 New pomodoro session started.")
-    print("🍅 Try to focus on your current task until the timer stops. Don't let others to interrupt you with talks or messages.")
+    print(
+        "🍅 Try to focus on your current task until the timer stops. Don't let others to interrupt you with talks or messages."
+    )
     print("🍅 After the session end you can relax and do whatever you want")
-    print(f"🍅 Your current task: '{task_title}'. Timer is set to run for {minutes} minutes")
+    print(
+        f"🍅 Your current task: '{task_title}'. Timer is set to run for {minutes} minutes"
+    )
+
+
+def run_task(run_minutes: int, task_title: str):
+    start_timestamp = round(time.time())
+    show_current_pomodoro_info(run_minutes, task_title)
+    try:
+        run_timer(run_minutes)
+        task = Task(task_title, start_timestamp, round(time.time()), True)
+        task_completed_notify(task_title)
+    except KeyboardInterrupt:
+        task = Task(task_title, start_timestamp, round(time.time()), False)
+        print(
+            "\nThe pomodoro was stopped early and it is marked as unfinished. Try not to stop timer or lose focus"
+        )
+    return task
+
+
+def evaluate_command(config: AppConfig, args: argparse.Namespace):
+    match args.command:
+        case "init":
+            print(f"Pomodoro is initialized and tasks will be stored in {config.file_path}")
+            SqliteTaskDatabase.init_database(config)
+        case "focus":
+            task = run_task(args.minutes, args.task_title)
+            database = SqliteTaskDatabase(config)
+            database.insert_task(task)
+
+        case "report":
+            print("Generating csv file with all activities...")
+
 
 def main():
-    parser = create_parser()
-    show_current_pomodoro_info(parser.minutes, parser.task_title)
-    try:
-        run_timer(parser.minutes)
-        task_completed_notify(parser.task_title)
-    except KeyboardInterrupt:
-        print("\nThe pomodoro was stopped early. Try not to stop timer or lose focus")
-
+    args = create_parser()
+    evaluate_command(AppConfig(), args)
 
 if __name__ == "__main__":
     main()
