@@ -11,8 +11,13 @@ chmod +x main.py
 cp main.py ~/.local/bin/pomodoro
 ~~~
 
+### 2. Initialize tasks storage
 
-### 2. Run the tracker 
+~~~bash
+pomodoro init
+~~~
+
+### 3. Run the tracker 
 
 Just run command `pomodoro` with 2 arguments:
 - minutes: time to run the timer
@@ -20,11 +25,11 @@ Just run command `pomodoro` with 2 arguments:
 
 Example:
 ~~~bash
-pomodoro 30 "Task 225 from jira"
+pomodoro focus 30 "Task 225 from jira"
 ~~~
 
 
-### 3. Get help
+### 4. Get help
 
 ~~~bash
 pomodoro --help
